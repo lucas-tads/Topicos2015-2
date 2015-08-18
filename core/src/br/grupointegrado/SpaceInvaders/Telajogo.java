@@ -8,11 +8,15 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.utils.SpriteDrawable;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FillViewport;
+
+import java.util.Random;
 
 import sun.rmi.runtime.Log;
 
@@ -32,6 +36,13 @@ public class Telajogo extends Telabase{
     private Texture texturajogadorEsquerda;
     private boolean indodireita;
     private boolean indoesquerda;
+    private boolean atirando;
+    private Array<Image> tiros = new Array<Image>();
+    private Texture texturatiro;
+    private Texture texturameteoro1;
+    private Texture texturameteoro2;
+    private Array<Image> meteoros1 = new Array<Image>();
+    private Array<Image> meteoros2 = new Array<Image>();
 
     /**
      * Construtor padão da tela de jogo,
@@ -50,9 +61,16 @@ public class Telajogo extends Telabase{
         batch = new SpriteBatch();
         palco = new Stage(new FillViewport(camera.viewportWidth, camera.viewportHeight, camera));
 
+        initTexturas();
         initFonte();
         initInformacoes();
         initJogador();
+    }
+
+    private void initTexturas() {
+        texturatiro = new Texture("sprites/shot.png");
+        texturameteoro1 = new Texture("sprites/enemie-1.png");
+        texturameteoro2 = new Texture("sprites/enemie-2.png");
     }
 
     private void initJogador() {
@@ -93,9 +111,71 @@ public class Telajogo extends Telabase{
         lbPontuacao.setPosition(10, camera.viewportHeight - 20);
         capturaTeclas();
         atualizarJogador(delta);
+        atualizartiros(delta);
+        atualizarmeteoros(delta);
 
         palco.act(delta);
         palco.draw();
+    }
+
+    private void atualizarmeteoros(float delta) {
+        int tipo = MathUtils.random(1,3);
+
+        if(tipo == 1){//cria metero 1
+            Image meteoro = new Image(texturameteoro1);
+            float x = MathUtils.random(0, camera.viewportWidth - meteoro.getWidth());
+            float y = MathUtils.random(camera.viewportHeight , camera.viewportHeight * 2);
+            meteoro.setPosition(x, y);
+            meteoros1.add(meteoro);
+            palco.addActor(meteoro);
+        }else {//cria metero 2
+            Image meteoro = new Image(texturameteoro1);
+            float x = MathUtils.random(0, camera.viewportWidth - meteoro.getWidth());
+            float y = MathUtils.random(camera.viewportHeight , camera.viewportHeight * 2);
+            meteoro.setPosition(x, y);
+            meteoros2.add(meteoro);
+        }
+
+        float velocidade = 200;
+        for (Image meteoro : meteoros1){
+            float x = meteoro.getX();
+            float y = meteoro.getY() - velocidade * delta;
+            meteoro.setPosition(x, y);
+        }
+    }
+
+    private final float MIM_INTERVALO_TIROS = 0.4f; // minimo de tempo entre os tiros
+
+    private float intervalotiros = 0;//temmpo aculado entre os tiros
+    private void atualizartiros(float delta) {
+
+        intervalotiros = intervalotiros + delta; /// acumula o intervalo
+
+        if(atirando){// testa se o tempo foi atingido
+            if(intervalotiros >= MIM_INTERVALO_TIROS) {
+                Image tiro = new Image(texturatiro);
+                float x = jogador.getX() + jogador.getWidth() / 2 - tiro.getWidth() / 2;
+                float y = jogador.getY() + jogador.getHeight();
+                tiro.setPosition(x, y);
+                tiros.add(tiro);
+                palco.addActor(tiro);
+                intervalotiros = 0;
+            }
+        }
+        float velocidade = 200; //velocidade de movimentacao do tiro
+        //percorre todos os tiros existentes
+        for (Image tiro : tiros){
+            //movimenta o tiro em direção ao topo
+            float x = tiro.getX();
+            float y = tiro.getY() + velocidade * delta;
+            tiro.setPosition(x,y);
+
+            //remove os tiros que sairam de posicao da tela
+            if(tiro.getY() > camera.viewportHeight){
+                tiros.removeValue(tiro, true); // remove da lista
+                tiro.remove();//remove do palco
+            }
+        }
     }
 
     private void atualizarJogador(Float delta) {
@@ -135,11 +215,17 @@ public class Telajogo extends Telabase{
     private void capturaTeclas() {
         indodireita = false;
         indoesquerda = false;
+        atirando = false;
 
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)){
             indoesquerda = true;
-        }else if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)){
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)){
             indodireita = true;
+        }
+
+        if(Gdx.input.isKeyPressed(Input.Keys.SPACE)){
+            atirando = true;
         }
     }
 
@@ -181,5 +267,8 @@ public class Telajogo extends Telabase{
         texturajogador.dispose();
         texturajogadorEsquerda.dispose();
         texturajogadorDireita.dispose();
+        texturatiro.dispose();
+        texturameteoro1.dispose();
+        texturameteoro2.dispose();
     }
 }
