@@ -2,12 +2,14 @@ package br.grupointegrado.SpaceInvaders;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -29,40 +31,45 @@ public class Telajogo extends Telabase{
     private OrthographicCamera camera;
     private SpriteBatch batch;
     private Stage palco;
+    private Stage palcoInformações;
     private BitmapFont fonte;
     private Label lbPontuacao;
     private Label lbGameOver;
     private Image jogador;
-    private Texture texturajogador;
-    private Texture texturajogadorDireita;
-    private Texture texturajogadorEsquerda;
-    private boolean indodireita;
-    private boolean indoesquerda;
-    private boolean atirando;
+    private Texture texturaJogador;
+    private Texture texturaJogadorDireita;
+    private Texture texturaJogadorEsquerda;
+    private boolean indoDireita;
+    private boolean indoEsquerda;
+    private Boolean atirando;
     private Array<Image> tiros = new Array<Image>();
-    private Texture texturatiro;
-    private Texture texturameteoro1;
-    private Texture texturameteoro2;
+    private Texture texturaTiro;
+    private Texture texturaMeteoro1;
+    private Texture texturaMeteoro2;
     private Array<Image> meteoros1 = new Array<Image>();
     private Array<Image> meteoros2 = new Array<Image>();
-    private boolean gameOver = false;
+
+    private Array<Texture> texturasExplosao = new Array<Texture>();
+    private Array<Explosao> explosoes = new Array<Explosao>();
+
 
     /**
-     * Construtor padão da tela de jogo,
-     * @param game referencia para classe principal
+     * Construtor padrão da tela de jogo
+     * @param game Referência para a classe principal
      */
     public Telajogo(MyGdxGame game) {
         super(game);
     }
 
     /**
-     * metodo chamado quando a tela é chamada
+     * Chamado quando a tela é exibida
      */
     @Override
     public void show() {
         camera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         batch = new SpriteBatch();
         palco = new Stage(new FillViewport(camera.viewportWidth, camera.viewportHeight, camera));
+        palcoInformações = new Stage(new FillViewport(camera.viewportWidth, camera.viewportHeight, camera));
 
         initTexturas();
         initFonte();
@@ -71,276 +78,372 @@ public class Telajogo extends Telabase{
     }
 
     private void initTexturas() {
-        texturatiro = new Texture("sprites/shot.png");
-        texturameteoro1 = new Texture("sprites/enemie-1.png");
-        texturameteoro2 = new Texture("sprites/enemie-2.png");
+
+        texturaTiro = new Texture("sprites/shot.png");
+        texturaMeteoro1 = new Texture("sprites/enemie-1.png");
+        texturaMeteoro2 = new Texture("sprites/enemie-2.png");
+
+        for (int i = 1; i<=17 ; i++){
+            Texture text = new Texture("sprites/explosion-"+ i +".png");
+            texturasExplosao.add(text);
+        }
     }
 
+    /**
+     * Instancia os objetos do jogador e adiciona no palco.
+     */
     private void initJogador() {
-        texturajogador = new Texture("sprites/player.png");
-        texturajogadorDireita = new Texture("sprites/player-right.png");
-        texturajogadorEsquerda = new Texture("sprites/player-left.png");
+        texturaJogador = new Texture("sprites/player.png");
+        texturaJogadorDireita = new Texture("sprites/player-right.png");
+        texturaJogadorEsquerda = new Texture("sprites/player-left.png");
 
-        jogador = new Image(texturajogador);
-        float x = camera.viewportWidth/2 - jogador.getWidth() / 2;
+        jogador = new Image(texturaJogador);
+        float x = camera.viewportWidth/2 - jogador.getWidth()/2 ;
         float y = 15;
         jogador.setPosition(x, y);
         palco.addActor(jogador);
     }
 
+
+    /**
+     * Instancia as informações escritas na tela.
+     */
     private void initInformacoes() {
-        Label.LabelStyle lbestilo = new Label.LabelStyle();
-        lbestilo.font = fonte;
-        lbestilo.fontColor = com.badlogic.gdx.graphics.Color.WHITE;
 
-        lbPontuacao = new Label("0 pontos", lbestilo);
-        palco.addActor(lbPontuacao);
+        Label.LabelStyle lbEstilo = new Label.LabelStyle();
+        lbEstilo.font = fonte;
+        lbEstilo.fontColor = Color.WHITE;
 
-        lbGameOver = new Label("Game Over!", lbestilo);
+        lbPontuacao = new Label("0 pontos", lbEstilo);
+        palcoInformações.addActor(lbPontuacao);
+
+        lbGameOver = new Label("Game Over" ,lbEstilo);
         lbGameOver.setVisible(false);
         palco.addActor(lbGameOver);
-    }
 
-    private void initFonte() {
-        fonte= new BitmapFont();
+
     }
 
     /**
-     * chamado a todo quadro de atulização do jogo
-     * @param delta tempo entre um quadro e outro por segundo
+     * Chamado a todo quadro de atualização do jogo FPS (Frame ou quadros por segundo)
+     * @param delta Tempo entre um quadro e outro em segundos
      */
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(.25f, .15f, .25f, 1);
+        //Limpa tela
+        Gdx.gl.glClearColor(.15f, .15f, .25f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
 
-        lbPontuacao.setPosition(10, camera.viewportHeight - 20);
-        lbPontuacao.setText(pontoacao + "Pontos");
+        lbPontuacao.setPosition(10, camera.viewportHeight -lbPontuacao.getPrefHeight() -20); // X Y   viewportHeight-20 significa que ira seta na posição a 20 pixel abaixo da altura maxima da tela
+        lbPontuacao.setText(pontuacao + " Pontos");
 
-        lbGameOver.setPosition(camera.viewportWidth / 2 - lbGameOver.getWidth() / 2,
-                camera.viewportHeight / 2);
+        lbGameOver.setPosition(camera.viewportWidth / 2 - lbGameOver.getWidth() / 2, camera.viewportHeight / 2);
         lbGameOver.setVisible(gameOver == true);
 
+        atualizarExplosoes(delta);
 
-        if(!gameOver) {
+        if (gameOver == false){
             capturaTeclas();
             atualizarJogador(delta);
-            atualizartiros(delta);
-            atualizarmeteoros(delta);
-            detectarcolisoes(meteoros1, 5);
-            detectarcolisoes(meteoros2, 10);
+            atualizaTiro(delta);
+            atualizarMeteoros(delta);
+            detectarColisoes(meteoros1,5);
+            detectarColisoes(meteoros2,15);
         }
 
-        palco.act(delta);
+
+
+
+        //Atualiza a situação do palco
+        palco.act(delta); // avisa que rodou um novo quadro
+        //desenha o palco na tela
         palco.draw();
+
+        //desenha o palco de informações
+        palcoInformações.act(delta);
+        palcoInformações.draw();
     }
 
-    Rectangle recJogador = new Rectangle();
-    Rectangle recTiro = new Rectangle();
-    Rectangle recMeteoro = new Rectangle();
-    private int pontoacao = 0;
+    private void atualizarExplosoes(float delta) {
+        for(Explosao explosao : explosoes){
+            //verifica se a explosao chegou ao fim
+            if(explosao.getEstagio() >= 16){
+                //chegou ao fim
+                explosoes.removeValue(explosao, true); //remove a explosão do array
+                explosao.getAtor().remove();
+            }
+            //ainda nao chegou ao fim
+            else{
+                explosao.atualizar(delta);
+            }
+        }
+    }
 
+    private Rectangle recJogador = new Rectangle();
+    private Rectangle recTiro = new Rectangle();
+    private Rectangle recMeteoro = new Rectangle();
+    private int pontuacao = 0;
+    private boolean gameOver = false;
 
-    private void detectarcolisoes(Array<Image> meteoros, int valeponto) {
-        recJogador.set(jogador.getX(), jogador.getY(), jogador.getWidth(), jogador.getHeight()); //define a
+    private void detectarColisoes(Array<Image> meteoros, int valePonto) {
+        recJogador.set(jogador.getX(),jogador.getY(),jogador.getWidth(),jogador.getHeight());
+
         for (Image meteoro : meteoros){
-            recMeteoro.set(meteoro.getX(), meteoro.getY(), meteoro.getWidth(), meteoro.getHeight());
+            recMeteoro.set(meteoro.getX(),meteoro.getY(),meteoro.getWidth(),meteoro.getHeight());
             //detecta colisoes com os tiros
             for (Image tiro : tiros){
-                recTiro.set(tiro.getX(), tiro.getY(), tiro.getWidth(), tiro.getHeight());
-                if(recMeteoro.overlaps(recTiro)){
-                    //aqui ocorre a colisao do tiro com o meteoro 1
-                    pontoacao += valeponto;
-                    tiro.remove();//remove do palco
-                    tiros.removeValue(tiro, true);//remove da lista
-                    meteoro.remove();//remove do palco
-                    meteoros.removeValue(meteoro, true);//remove da lista
+                recTiro.set(tiro.getX(),tiro.getY(),tiro.getWidth(),tiro.getHeight());
+
+                if (recMeteoro.overlaps(recTiro)) {
+                    //aqui ocorre uma colisão do tiro com o meteoro1;
+                    pontuacao += valePonto;
+                    tiro.remove(); //remove do palco;
+                    tiros.removeValue(tiro, true); //remove da lista;
+                    meteoro.remove(); // remove do palco;
+                    meteoros.removeValue(meteoro, true); // remove da lista
+                    criarExplosao(meteoro.getX(),meteoro.getY());
+
                 }
             }
 
             //detecta colisao com o player
-            if(recJogador.overlaps(recMeteoro)){ //ocorre  a colisao entre o jogodador e os meteoros
-                gameOver = true;
+            if (recJogador.overlaps(recMeteoro)){
+                //ocorre colisao de jogador com meteoro1
+                gameOver =true;
+
             }
+
+
         }
+
     }
 
-    private void atualizarmeteoros(float delta) {
-        int qtdmeteoros  = meteoros1.size + meteoros2.size;
+    /**
+     * Cria explosao na posicao X e Y
+     * @param x
+     * @param y
+     */
+    private void criarExplosao(float x, float y) {
+        Image ator = new Image(texturasExplosao.get(0));
+        ator.setPosition(x, y);
+        palco.addActor(ator);
 
+        Explosao explosao = new Explosao(ator, texturasExplosao);
+        explosoes.add(explosao);
 
-        if (qtdmeteoros < 15) {
-            int tipo = MathUtils.random(1, 4);
+    }
 
-            if (tipo == 1) {//cria metero 1
-                Image meteoro = new Image(texturameteoro1);
+    private void atualizarMeteoros(float delta) {
+        int qtdMeteoros = meteoros1.size + meteoros2.size; // retorna a quantidade de meteoros criados
+
+        if (qtdMeteoros < 10){
+            int tipo = MathUtils.random(1, 4); // retorna 1 ou 2 aleatoreamente
+            if (tipo == 1) {
+                //cria meteoro 1
+                Image meteoro = new Image(texturaMeteoro1);
                 float x = MathUtils.random(0, camera.viewportWidth - meteoro.getWidth());
                 float y = MathUtils.random(camera.viewportHeight, camera.viewportHeight * 2);
                 meteoro.setPosition(x, y);
                 meteoros1.add(meteoro);
                 palco.addActor(meteoro);
-            } else if (tipo == 2){//cria metero 2
-                Image meteoro = new Image(texturameteoro2);
+            } else if (tipo == 2 ) {
+                //cria meteoro 2
+                Image meteoro = new Image(texturaMeteoro2);
                 float x = MathUtils.random(0, camera.viewportWidth - meteoro.getWidth());
                 float y = MathUtils.random(camera.viewportHeight, camera.viewportHeight * 2);
                 meteoro.setPosition(x, y);
                 meteoros2.add(meteoro);
                 palco.addActor(meteoro);
             }
+
         }
 
-        float velocidade1 = 200;
-        for (Image meteoro : meteoros1){
+        float velocidade1 = 100; // 200 pixels por segundo
+        for(Image meteoro : meteoros1){
+            //Movimenta o tiro em direção ao topo
             float x = meteoro.getX();
             float y = meteoro.getY() - velocidade1 * delta;
-            meteoro.setPosition(x, y); //atualiza a posicção do meteoro
-
-            if (meteoro.getY() + meteoro.getHeight() < 0){
-                meteoro.remove(); //remove do palco
-                meteoros1.removeValue(meteoro, true);//remove da lista
+            meteoro.setPosition(x, y); // atualiza a posição do meteoro;
+            if(meteoro.getY() + meteoro.getHeight() < 0){
+                meteoro.remove();//remove do palco;
+                meteoros1.removeValue(meteoro, true);//remove da lista;
             }
         }
 
-        float velocidade2 = 250;
-        for (Image meteoro : meteoros2){
+        float velocidade2 = 150; // 200 pixels por segundo
+        for(Image meteoro : meteoros2){
+            //Movimenta o tiro em direção ao topo
             float x = meteoro.getX();
             float y = meteoro.getY() - velocidade2 * delta;
-            meteoro.setPosition(x, y); //atualiza a posicção do meteoro
-
-            if (meteoro.getY() + meteoro.getHeight() < 0){
-                meteoro.remove(); //remove do palco
-                meteoros2.removeValue(meteoro, true);//remove da lista
+            meteoro.setPosition(x, y); // atualiza a posição do meteoro;
+            if(meteoro.getY() + meteoro.getHeight() < 0){
+                meteoro.remove();//remove do palco;
+                meteoros2.removeValue(meteoro, true);//remove da lista;
             }
         }
+
     }
 
-    private final float MIM_INTERVALO_TIROS = 0.1f; // minimo de tempo entre os tiros
+    private final float MIN_INTERVALO_TIROS = 0.4f;//minimo de tempo entre os tiros
+    private float intervaloTiros = 0;//tempo acumulado entre os tiros
 
-    private float intervalotiros = 0;//temmpo aculado entre os tiros
-    private void atualizartiros(float delta) {
 
-        intervalotiros = intervalotiros + delta; /// acumula o intervalo
-
-        if(atirando){// testa se o tempo foi atingido
-            if(intervalotiros >= MIM_INTERVALO_TIROS) {
-                Image tiro = new Image(texturatiro);
-                float x = jogador.getX() + jogador.getWidth() / 2 - tiro.getWidth() / 2;
+    private void atualizaTiro(float delta) {
+        intervaloTiros = intervaloTiros + delta; //acumula o tempo percorrido
+        //cria um novo tiro se necessário
+        if(atirando){
+            //verifica se o tempo minimo foi atingido
+            if (intervaloTiros >= MIN_INTERVALO_TIROS) {
+                Image tiro = new Image(texturaTiro);
+                float x = jogador.getX() + jogador.getImageWidth() / 2 - tiro.getWidth()/2;
                 float y = jogador.getY() + jogador.getHeight();
                 tiro.setPosition(x, y);
                 tiros.add(tiro);
                 palco.addActor(tiro);
-                intervalotiros = 0;
+                intervaloTiros = 0;
             }
         }
-        float velocidade = 300; //velocidade de movimentacao do tiro
+        float velocidade = 200; // velocidade de movimentação do tiro
         //percorre todos os tiros existentes
-        for (Image tiro : tiros){
-            //movimenta o tiro em direção ao topo
+        for(Image tiro : tiros){
+            //Movimenta o tiro em direção ao topo
             float x = tiro.getX();
             float y = tiro.getY() + velocidade * delta;
-            tiro.setPosition(x,y);
-
-            //remove os tiros que sairam de posicao da tela
+            tiro.setPosition(x, y);
+            //remove os tiros que sairam da tela
             if(tiro.getY() > camera.viewportHeight){
-                tiros.removeValue(tiro, true); // remove da lista
+                tiros.removeValue(tiro, true);//remove da lista
                 tiro.remove();//remove do palco
             }
         }
     }
+    /**
+     * Instancia os objetos de fonte.
+     */
+    private void initFonte() {
 
-    private void atualizarJogador(Float delta) {
-        float velocidade =200; //velocidade de movimento do jogador
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/roboto.ttf"));
+        FreeTypeFontGenerator.FreeTypeFontParameter param = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        param.color = Color.WHITE;
+        param.size = 24;
+        param.shadowOffsetX =2;
+        param.shadowOffsetY =2;
+        param.shadowColor = Color.BLUE;
 
-        if (indodireita){
-            if (jogador.getX() < camera.viewportWidth - jogador.getWidth()) {
+
+        fonte = generator.generateFont(param);
+        generator.dispose();
+
+    }
+
+
+    /**
+     * Atualiza a posição do jogador
+     * @param delta Tempo entre um quadro e outro ( em segundos)
+     */
+    private void atualizarJogador(float delta) {
+        float velocidade = 200; //velocidade de movimento do jogador
+        if (indoDireita){
+            if(jogador.getX() < camera.viewportWidth - jogador.getWidth()){
                 float x = jogador.getX() + velocidade * delta;
                 float y = jogador.getY();
-                jogador.setPosition(x, y);
+                jogador.setPosition(x,y);
+
             }
         }
-        else if(indoesquerda){
-            if (jogador.getX() > 0){
+        if (indoEsquerda){
+            if(jogador.getX() > 0){
                 float x = jogador.getX() - velocidade * delta;
                 float y = jogador.getY();
-                jogador.setPosition(x, y);
+                jogador.setPosition(x,y);
             }
         }
 
-        if(indodireita){
-            //trocar imagem direita
-            jogador.setDrawable(new SpriteDrawable(new Sprite(texturajogadorDireita)));
-        }else if (indoesquerda){
+
+        if (indoDireita){
+            //troca imagem direita
+            jogador.setDrawable(new SpriteDrawable(new Sprite(texturaJogadorDireita)));
+        }else if (indoEsquerda){
             //trocar imagem esquerda
-            jogador.setDrawable(new SpriteDrawable(new Sprite(texturajogadorEsquerda)));
+            jogador.setDrawable(new SpriteDrawable(new Sprite(texturaJogadorEsquerda)));
         }else{
-            //trocar imagem do centro
-            jogador.setDrawable(new SpriteDrawable(new Sprite(texturajogador)));
+            //trocar imagem centro
+            jogador.setDrawable(new SpriteDrawable(new Sprite(texturaJogador)));
         }
+
     }
 
-
     /**
-     * verifica se as teclas estão pressionadas
+     * Verifica se as teclas estão pressionadas
      */
     private void capturaTeclas() {
-        indodireita = false;
-        indoesquerda = false;
+        indoDireita = false;
+        indoEsquerda = false;
         atirando = false;
 
-        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-            indoesquerda = true;
+        if(Gdx.input.isKeyPressed(Input.Keys.LEFT )){
+            indoEsquerda = true;
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-            indodireita = true;
+        if(Gdx.input.isKeyPressed(Input.Keys.RIGHT )){
+            indoDireita = true;
         }
 
-        if (Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
+        if(Gdx.input.isKeyPressed(Input.Keys.SPACE)){
             atirando = true;
         }
+
     }
 
 
     /**
-     * é chamado sempre que há uma alteraçao no tamanho da tela
+     * É chamado sempre que há uma alteração no tamanho da tela
      * @param width novo valor de largura da tela
      * @param height novo valor de altura da tela
      */
     @Override
     public void resize(int width, int height) {
-        camera.setToOrtho(false, width, height);
+        camera.setToOrtho(false,width,height);
         camera.update();
     }
 
+
     /**
-     * é chamado sempre que o jogo for minimizado
+     * É chamado sempre que o jogo for minimizado
      */
     @Override
     public void pause() {
 
     }
 
+
     /**
-     * é chamado sempre que o jogo voltar para o primeiro plano
+     * É chamado sempre que o jogo voltar para o primeiro plano
      */
     @Override
     public void resume() {
 
     }
 
+
     /**
-     * é chamado quando a nossa tela for destruida
+     * É chamado quando a tela for destruida
      */
     @Override
     public void dispose() {
         batch.dispose();
         palco.dispose();
         fonte.dispose();
-        texturajogador.dispose();
-        texturajogadorEsquerda.dispose();
-        texturajogadorDireita.dispose();
-        texturatiro.dispose();
-        texturameteoro1.dispose();
-        texturameteoro2.dispose();
+        palcoInformações.dispose();
+        texturaJogador.dispose();
+        texturaJogadorDireita.dispose();
+        texturaJogadorEsquerda.dispose();
+        texturaTiro.dispose();
+        texturaMeteoro1.dispose();
+        texturaMeteoro2.dispose();
+        for(Texture text : texturasExplosao){
+            text.dispose();
+        }
+
     }
 }
