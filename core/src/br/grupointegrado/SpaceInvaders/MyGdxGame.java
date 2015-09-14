@@ -6,6 +6,6 @@ public class MyGdxGame extends Game {
 
 	@Override
 	public void create() {
-		setScreen(new Telajogo(this));
+		setScreen(new Telamenu(this));
 	}
 }

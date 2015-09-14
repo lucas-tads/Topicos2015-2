@@ -2,6 +2,8 @@ package br.grupointegrado.SpaceInvaders;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -52,6 +54,11 @@ public class Telajogo extends Telabase{
     private Array<Texture> texturasExplosao = new Array<Texture>();
     private Array<Explosao> explosoes = new Array<Explosao>();
 
+    private Sound somtiro;
+    private Sound somExplosao;
+    private Sound somGameOver;
+    private Music musicfundo;
+
 
     /**
      * Construtor padrão da tela de jogo
@@ -71,11 +78,23 @@ public class Telajogo extends Telabase{
         palco = new Stage(new FillViewport(camera.viewportWidth, camera.viewportHeight, camera));
         palcoInformações = new Stage(new FillViewport(camera.viewportWidth, camera.viewportHeight, camera));
 
+        initsons();
         initTexturas();
         initFonte();
         initInformacoes();
         initJogador();
+
     }
+
+    private void initsons() {
+        somtiro = Gdx.audio.newSound(Gdx.files.internal("sounds/shoot.mp3"));
+        somExplosao = Gdx.audio.newSound(Gdx.files.internal("sounds/explosion.mp3"));
+        somGameOver = Gdx.audio.newSound(Gdx.files.internal("sounds/gameover.mp3"));
+        musicfundo = Gdx.audio.newMusic(Gdx.files.internal("sounds/background.mp3"));
+        //musicfundo = Gdx.audio.newMusic(Gdx.files.internal("sounds/super.mp3"));
+        musicfundo.setLooping(true);
+    }
+
 
     private void initTexturas() {
 
@@ -135,7 +154,7 @@ public class Telajogo extends Telabase{
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
 
-        lbPontuacao.setPosition(10, camera.viewportHeight -lbPontuacao.getPrefHeight() -20); // X Y   viewportHeight-20 significa que ira seta na posição a 20 pixel abaixo da altura maxima da tela
+        lbPontuacao.setPosition(10, camera.viewportHeight - lbPontuacao.getPrefHeight() - 20); // X Y   viewportHeight-20 significa que ira seta na posição a 20 pixel abaixo da altura maxima da tela
         lbPontuacao.setText(pontuacao + " Pontos");
 
         lbGameOver.setPosition(camera.viewportWidth / 2 - lbGameOver.getWidth() / 2, camera.viewportHeight / 2);
@@ -144,13 +163,16 @@ public class Telajogo extends Telabase{
         atualizarExplosoes(delta);
 
         if (gameOver == false){
+            if (!musicfundo.isPlaying())
+                musicfundo.play();
             capturaTeclas();
             atualizarJogador(delta);
             atualizaTiro(delta);
             atualizarMeteoros(delta);
             detectarColisoes(meteoros1,5);
             detectarColisoes(meteoros2,15);
-        }
+        }else if (musicfundo.isPlaying())
+                musicfundo.stop();
 
 
 
@@ -202,7 +224,8 @@ public class Telajogo extends Telabase{
                     tiros.removeValue(tiro, true); //remove da lista;
                     meteoro.remove(); // remove do palco;
                     meteoros.removeValue(meteoro, true); // remove da lista
-                    criarExplosao(meteoro.getX(),meteoro.getY());
+                    criarExplosao(meteoro.getX() + meteoro.getWidth(), meteoro.getY() + meteoro.getHeight() /2);
+                    somExplosao.play();
 
                 }
             }
@@ -211,7 +234,7 @@ public class Telajogo extends Telabase{
             if (recJogador.overlaps(recMeteoro)){
                 //ocorre colisao de jogador com meteoro1
                 gameOver =true;
-
+                somGameOver.play();
             }
 
 
@@ -226,7 +249,8 @@ public class Telajogo extends Telabase{
      */
     private void criarExplosao(float x, float y) {
         Image ator = new Image(texturasExplosao.get(0));
-        ator.setPosition(x, y);
+        ator.setPosition( x - ator.getWidth() / 2, y - ator.getHeight() / 2);
+        //ator.setPosition(x, y);
         palco.addActor(ator);
 
         Explosao explosao = new Explosao(ator, texturasExplosao);
@@ -302,6 +326,7 @@ public class Telajogo extends Telabase{
                 tiros.add(tiro);
                 palco.addActor(tiro);
                 intervaloTiros = 0;
+                somtiro.play();
             }
         }
         float velocidade = 200; // velocidade de movimentação do tiro
@@ -441,6 +466,10 @@ public class Telajogo extends Telabase{
         texturaTiro.dispose();
         texturaMeteoro1.dispose();
         texturaMeteoro2.dispose();
+
+        somExplosao.dispose();
+        somtiro.dispose();
+
         for(Texture text : texturasExplosao){
             text.dispose();
         }
