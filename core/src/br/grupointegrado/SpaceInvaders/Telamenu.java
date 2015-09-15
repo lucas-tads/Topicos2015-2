@@ -60,7 +60,7 @@ public class Telamenu extends  Telabase {
                 new FreeTypeFontGenerator.FreeTypeFontParameter();
 
         params.size = 48;
-        params.color = new Color(.25f , .25f, .25f ,.85f);
+        params.color = new Color(.25f , .25f ,.85f, 1);
         params.shadowOffsetX = 2;
         params.shadowOffsetY = 2;
         params.shadowColor = Color.BLACK;
