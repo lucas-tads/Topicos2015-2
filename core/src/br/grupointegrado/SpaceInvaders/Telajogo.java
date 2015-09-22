@@ -1,7 +1,9 @@
 package br.grupointegrado.SpaceInvaders;
 
+import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
@@ -14,6 +16,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -171,8 +174,12 @@ public class Telajogo extends Telabase{
             atualizarMeteoros(delta);
             detectarColisoes(meteoros1,5);
             detectarColisoes(meteoros2,15);
-        }else if (musicfundo.isPlaying())
+        }else{
+            if (musicfundo.isPlaying()) {
                 musicfundo.stop();
+            }
+            reiniciarjogo();
+        }
 
 
 
@@ -185,6 +192,19 @@ public class Telajogo extends Telabase{
         //desenha o palco de informações
         palcoInformações.act(delta);
         palcoInformações.draw();
+    }
+
+    private void reiniciarjogo() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)){
+            Preferences preferencias = Gdx.app.getPreferences("SpaceInvaders");
+            int pontuacaMaxima = preferencias.getInteger("pontuacao_maxima", 0);
+            //virefica se pontuacao é maior que a pontuacao maxima
+            if (pontuacao > pontuacaMaxima){
+                preferencias.putInteger("pontuacao_maxima", pontuacaMaxima);
+                preferencias.flush();
+            }
+            game.setScreen(new Telamenu(game));
+        }
     }
 
     private void atualizarExplosoes(float delta) {
@@ -292,6 +312,7 @@ public class Telajogo extends Telabase{
             if(meteoro.getY() + meteoro.getHeight() < 0){
                 meteoro.remove();//remove do palco;
                 meteoros1.removeValue(meteoro, true);//remove da lista;
+                pontuacao = pontuacao - 5;
             }
         }
 
@@ -304,6 +325,7 @@ public class Telajogo extends Telabase{
             if(meteoro.getY() + meteoro.getHeight() < 0){
                 meteoro.remove();//remove do palco;
                 meteoros2.removeValue(meteoro, true);//remove da lista;
+                pontuacao = pontuacao - 10;
             }
         }
 
@@ -407,19 +429,54 @@ public class Telajogo extends Telabase{
         indoEsquerda = false;
         atirando = false;
 
-        if(Gdx.input.isKeyPressed(Input.Keys.LEFT )){
+
+        if(Gdx.input.isKeyPressed(Input.Keys.LEFT ) || clicouesquerda()){
             indoEsquerda = true;
         }
-        if(Gdx.input.isKeyPressed(Input.Keys.RIGHT )){
+        if(Gdx.input.isKeyPressed(Input.Keys.RIGHT )|| clicoudireita()){
             indoDireita = true;
         }
 
-        if(Gdx.input.isKeyPressed(Input.Keys.SPACE)){
+        if(Gdx.input.isKeyPressed(Input.Keys.SPACE) || Gdx.app.getType() == Application.ApplicationType.Android){
             atirando = true;
         }
 
     }
 
+    private boolean clicoudireita() {
+        if (Gdx.input.isTouched()) {
+            Vector3 posicao = new Vector3();
+            //captura clique/toque na janela do wimdows
+            posicao.x = Gdx.input.getX();
+            posicao.y = Gdx.input.getY();
+            //converter para uma cordenada do jogo
+            posicao = camera.unproject(posicao);
+            float meio = camera.viewportWidth / 2;
+
+            if (posicao.x > meio) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean clicouesquerda() {
+        if (Gdx.input.isTouched()) {
+            Vector3 posicao = new Vector3();
+            //captura clique/toque na janela do wimdows
+            posicao.x = Gdx.input.getX();
+            posicao.y = Gdx.input.getY();
+            //converter para uma cordenada do jogo
+            posicao = camera.unproject(posicao);
+            float meio = camera.viewportWidth / 2;
+
+            if (posicao.x < meio) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * É chamado sempre que há uma alteração no tamanho da tela
